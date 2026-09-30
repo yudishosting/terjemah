@@ -1,0 +1,466 @@
+```html
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Penerjemah Driver Bali — Otomatis Tanpa Tombol</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      touch-action: manipulation;
+    }
+    @keyframes pulseSoft {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.04); opacity: 0.9; }
+    }
+    .pulse-mic {
+      animation: pulseSoft 1.8s infinite ease-in-out;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-900 text-white min-h-screen flex flex-col antialiased selection:bg-amber-500">
+  
+  <!-- Header Sederhana -->
+  <header class="bg-slate-950 border-b border-slate-800 px-4 py-3 sticky top-0 z-20 flex items-center justify-between shadow-md">
+    <div class="flex items-center space-x-2.5">
+      <div class="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-slate-950 font-black shadow-md">
+        🚖
+      </div>
+      <div>
+        <h1 class="text-base sm:text-lg font-extrabold text-white leading-tight">Penerjemah Driver Bali</h1>
+        <p class="text-xs text-amber-400 font-medium">Bicara Otomatis: Bule (Inggris) ⇄ Pak Driver (Indonesia)</p>
+      </div>
+    </div>
+
+    <!-- Tombol Hapus Layar jika penuh -->
+    <button id="clearChatBtn" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-bold flex items-center gap-1.5 transition">
+      <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+      <span>Bersihkan Layar</span>
+    </button>
+  </header>
+
+  <!-- Area Kontrol Utama: Super Besar & Jelas untuk Holder HP Mobil -->
+  <main class="flex-1 flex flex-col max-w-2xl w-full mx-auto p-3 sm:p-4 gap-3">
+
+    <div class="bg-slate-950 border-2 border-slate-800 rounded-3xl p-4 sm:p-5 shadow-2xl flex flex-col items-center text-center">
+      
+      <!-- Status Badge Besar -->
+      <div id="statusBadge" class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-800 text-slate-300 text-sm font-bold mb-3 border border-slate-700">
+        <span id="statusDot" class="w-3.5 h-3.5 rounded-full bg-slate-500"></span>
+        <span id="statusText">Alat Sedang Istirahat (Mati)</span>
+      </div>
+
+      <!-- Panduan Singkat -->
+      <p id="helperText" class="text-xs sm:text-sm text-slate-400 max-w-md mb-4 font-medium">
+        Cukup pencet tombol hijau di bawah <strong class="text-white">SATU KALI</strong>, lalu taruh HP di holder mobil. Anda dan penumpang bule tinggal ngobrol langsung seperti biasa!
+      </p>
+
+      <!-- Tombol UTAMA: Mulai / Berhenti (Ukuran Jempol Sopir) -->
+      <div class="w-full">
+        <button id="mainToggleBtn" class="w-full py-4 sm:py-5 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-slate-950 font-black text-lg sm:text-xl shadow-xl shadow-emerald-500/25 flex items-center justify-center space-x-3 active:scale-95 transition-all">
+          <i data-lucide="mic" class="w-7 h-7"></i>
+          <span id="mainBtnText">MULAI BICARA OTOMATIS</span>
+        </button>
+      </div>
+
+      <!-- Teks yang Sedang Terdengar Langsung (Interim) -->
+      <div id="liveListeningBox" class="mt-3 w-full hidden bg-slate-900/90 border border-amber-500/40 rounded-xl px-3 py-2 text-xs text-amber-300 flex items-center justify-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+        <span class="font-bold">Mendengar:</span>
+        <span id="liveListeningText" class="italic truncate max-w-[280px]">"..."</span>
+      </div>
+    </div>
+
+    <div class="flex-1 flex flex-col bg-slate-950/60 border border-slate-800/80 rounded-2xl overflow-hidden shadow-inner min-h-[350px]">
+      <div class="bg-slate-900/90 px-4 py-2.5 border-b border-slate-800 flex items-center justify-between text-xs">
+        <span class="font-extrabold text-slate-300 flex items-center gap-1.5">
+          <i data-lucide="message-square-text" class="w-4 h-4 text-amber-400"></i>
+          Percakapan Terakhir
+        </span>
+        <span class="text-slate-400 font-medium">Otomatis Terjemah & Bunyi Suara</span>
+      </div>
+
+      <!-- Daftar Percakapan Card Besar -->
+      <div id="conversationFeed" class="flex-1 p-3 sm:p-4 space-y-3.5 overflow-y-auto max-h-[55vh]">
+        <!-- Tampilan Kosong Pertama Kali -->
+        <div id="emptyFeedState" class="h-48 flex flex-col items-center justify-center text-center p-4">
+          <div class="text-4xl mb-2">🌴</div>
+          <h2 class="text-base font-bold text-slate-300">Siap Melayani Tamu Bule</h2>
+          <p class="text-xs text-slate-400 mt-1 max-w-sm">
+            Tekan tombol hijau di atas, lalu biarkan bule ngomong Inggris atau Bapak ngomong Indonesia. Suara terjemahan akan dibacakan langsung!
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Audio Player Tersembunyi untuk Pemutaran Suara -->
+  <audio id="ttsAudio" class="hidden"></audio>
+
+  <script>
+    // State Aplikasi
+    let isRunning = false;
+    let isSpeaking = false;
+    let isTranslating = false;
+    let recognition = null;
+    let silenceTimer = null;
+    let tempFinalText = '';
+    let tempInterimText = '';
+
+    // Elemen DOM
+    const mainToggleBtn = document.getElementById('mainToggleBtn');
+    const mainBtnText = document.getElementById('mainBtnText');
+    const statusBadge = document.getElementById('statusBadge');
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const helperText = document.getElementById('helperText');
+    const liveListeningBox = document.getElementById('liveListeningBox');
+    const liveListeningText = document.getElementById('liveListeningText');
+    const conversationFeed = document.getElementById('conversationFeed');
+    const emptyFeedState = document.getElementById('emptyFeedState');
+    const clearChatBtn = document.getElementById('clearChatBtn');
+    const ttsAudio = document.getElementById('ttsAudio');
+
+    // Inisialisasi Icon Lucide
+    lucide.createIcons();
+
+    // Fungsi Pengubah Status Visual Sederhana (Jelas & Terang)
+    function setSystemStatus(state, customNote = '') {
+      if (state === 'OFF') {
+        statusBadge.className = "inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-800 text-slate-300 text-sm font-bold mb-3 border border-slate-700";
+        statusDot.className = "w-3.5 h-3.5 rounded-full bg-slate-500";
+        statusText.textContent = "Alat Sedang Istirahat (Mati)";
+        helperText.textContent = 'Tekan "MULAI BICARA OTOMATIS" saat ada tamu di mobil.';
+        mainToggleBtn.className = "w-full py-4 sm:py-5 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-slate-950 font-black text-lg sm:text-xl shadow-xl shadow-emerald-500/25 flex items-center justify-center space-x-3 active:scale-95 transition-all";
+        mainBtnText.textContent = "MULAI BICARA OTOMATIS";
+      } else if (state === 'LISTENING') {
+        statusBadge.className = "inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-950 text-emerald-300 text-sm font-bold mb-3 border border-emerald-500/50 pulse-mic";
+        statusDot.className = "w-3.5 h-3.5 rounded-full bg-emerald-400";
+        statusText.textContent = "🟢 Sedang Mendengarkan... (Silakan Bicara)";
+        helperText.textContent = 'Bule atau Bapak bisa langsung ngomong santai. Alat otomatis mendengar.';
+        mainToggleBtn.className = "w-full py-3.5 px-6 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-base sm:text-lg shadow-lg shadow-rose-600/30 flex items-center justify-center space-x-3 active:scale-95 transition-all";
+        mainBtnText.textContent = "BERHENTI (STOP)";
+      } else if (state === 'TRANSLATING') {
+        statusBadge.className = "inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-950 text-purple-300 text-sm font-bold mb-3 border border-purple-500/50";
+        statusDot.className = "w-3.5 h-3.5 rounded-full bg-purple-400 animate-pulse";
+        statusText.textContent = "🟣 Sedang Menerjemahkan...";
+        helperText.textContent = 'Mohon tunggu 1 detik, sedang menyiapkan arti dan suara...';
+      } else if (state === 'SPEAKING') {
+        statusBadge.className = "inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-950 text-amber-300 text-sm font-bold mb-3 border border-amber-500/50";
+        statusDot.className = "w-3.5 h-3.5 rounded-full bg-amber-400";
+        statusText.textContent = "🔊 Sedang Membacakan Suara...";
+        helperText.textContent = 'Mikrofon istirahat sejenak agar tidak mendengar suaranya sendiri.';
+      }
+    }
+
+    function initSpeechEngine() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("Browser HP Anda belum mendukung pendengaran suara otomatis. Gunakan Google Chrome versi terbaru ya Pak!");
+        return false;
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+      // Bahasa dibiarkan auto/bilingual
+      recognition.lang = '';
+
+      recognition.onstart = () => {
+        if (isRunning && !isSpeaking && !isTranslating) {
+          setSystemStatus('LISTENING');
+        }
+      };
+
+      recognition.onresult = (event) => {
+        // Echo Guard: Jangan dengar saat sedang membacakan suara terjemahan
+        if (isSpeaking || isTranslating) return;
+
+        let interim = '';
+        let final = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            final += event.results[i][0].transcript + ' ';
+          } else {
+            interim += event.results[i][0].transcript;
+          }
+        }
+
+        if (final.trim().length > 0) {
+          tempFinalText += final;
+        }
+        tempInterimText = interim;
+
+        const currentSaid = (tempFinalText + interim).trim();
+
+        // Tampilkan teks berjalan di layar
+        if (currentSaid.length > 0) {
+          liveListeningBox.classList.remove('hidden');
+          liveListeningText.textContent = `"${currentSaid}"`;
+        }
+
+        // Deteksi Jeda Berhenti Bicara (Silence Detection ~1.2 detik)
+        if (silenceTimer) clearTimeout(silenceTimer);
+
+        if (currentSaid.length > 1) {
+          silenceTimer = setTimeout(() => {
+            // Selesai bicara -> Proses terjemahan otomatis!
+            processFinishedSpeech(currentSaid);
+          }, 1200);
+        }
+      };
+
+      recognition.onerror = (e) => {
+        console.warn("Info mic:", e.error);
+      };
+
+      recognition.onend = () => {
+        // Otomatis nyalakan kembali jika mode masih jalan dan tidak sedang bunyi suara
+        if (isRunning && !isSpeaking && !isTranslating) {
+          try {
+            recognition.start();
+          } catch (err) {}
+        }
+      };
+
+      return true;
+    }
+
+    async function processFinishedSpeech(spokenText) {
+      if (!spokenText || isSpeaking || isTranslating) return;
+
+      isTranslating = true;
+      if (silenceTimer) clearTimeout(silenceTimer);
+
+      // Bersihkan teks sementara
+      liveListeningBox.classList.add('hidden');
+      tempFinalText = '';
+      tempInterimText = '';
+
+      setSystemStatus('TRANSLATING');
+
+      try {
+        const apiKey = ""; // Disuntikkan otomatis oleh lingkungan
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+        // Prompt khusus driver pariwisata Bali: Ramah, sopan, natural
+        const systemPrompt = `You are a real-time spoken interpreter inside a tourist taxi/transport car in Bali, Indonesia.
+Roles:
+- If the speaker speaks ENGLISH: The speaker is a foreign tourist (bule). Translate their speech into friendly, clear, natural INDONESIAN so the Balinese driver easily understands.
+- If the speaker speaks INDONESIAN: The speaker is the driver (Pak Driver Bali). Translate their speech into polite, helpful, clear conversational ENGLISH suitable for foreign passengers.
+Respond ONLY with JSON format:
+{
+  "source": "en" | "id",
+  "original": "original text spoken",
+  "translation": "natural polite translation",
+  "spokenNote": "short phonetic speech text"
+}`;
+
+        const payload = {
+          contents: [{ role: "user", parts: [{ text: spokenText }] }],
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "OBJECT",
+              properties: {
+                source: { type: "STRING", enum: ["en", "id"] },
+                original: { type: "STRING" },
+                translation: { type: "STRING" }
+              },
+              required: ["source", "original", "translation"]
+            }
+          }
+        };
+
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        if (jsonText) {
+          const result = JSON.parse(jsonText);
+          addConversationCard(result);
+          // Bacakan suara hasil terjemahan
+          await speakOutput(result.translation, result.source === 'en' ? 'id' : 'en');
+        }
+
+      } catch (err) {
+        console.error("Gagal terjemah:", err);
+      } finally {
+        isTranslating = false;
+        if (isRunning && !isSpeaking) {
+          setSystemStatus('LISTENING');
+          try { recognition.start(); } catch (e) {}
+        }
+      }
+    }
+
+    async function speakOutput(text, targetLang) {
+      return new Promise(async (resolve) => {
+        isSpeaking = true;
+        setSystemStatus('SPEAKING');
+
+        // ECHO GUARD: Matikan mic sementara saat robot berbicara
+        if (recognition) {
+          try { recognition.abort(); } catch (e) {}
+        }
+
+        const selesaiBicara = () => {
+          // Beri jeda 400ms agar gema di dalam kabin mobil tidak diserap mic
+          setTimeout(() => {
+            isSpeaking = false;
+            if (isRunning) {
+              setSystemStatus('LISTENING');
+              try { recognition.start(); } catch (e) {}
+            }
+            resolve();
+          }, 400);
+        };
+
+        // Coba Suara Native Peramban HP (Paling cepat & stabil di mobil)
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const utter = new SpeechSynthesisUtterance(text);
+          utter.lang = targetLang === 'id' ? 'id-ID' : 'en-US';
+          utter.rate = 0.95; // Sedikit lebih lambat agar sangat jelas di jalan
+          utter.pitch = 1.0;
+
+          utter.onend = selesaiBicara;
+          utter.onerror = selesaiBicara;
+
+          window.speechSynthesis.speak(utter);
+        } else {
+          selesaiBicara();
+        }
+      });
+    }
+
+    function addConversationCard(data) {
+      if (emptyFeedState) emptyFeedState.remove();
+
+      const isTourist = data.source === 'en';
+      const card = document.createElement('div');
+      
+      // Desain kartu besar dan kontras tinggi untuk dilihat dari holder mobil
+      if (isTourist) {
+        // Tamu Bule bicara -> Ditampilkan besar untuk Pak Driver
+        card.className = "p-4 rounded-2xl bg-slate-900 border-2 border-blue-500/40 shadow-lg";
+        card.innerHTML = `
+          <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
+            <span class="text-xs font-black px-2.5 py-1 rounded-md bg-blue-500/20 text-blue-300 flex items-center gap-1.5">
+              ✈️ BULE / PENUMPANG BILANG:
+            </span>
+            <button class="speak-again-btn p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300" title="Putar suara lagi">
+              <i data-lucide="volume-2" class="w-4 h-4 text-blue-400"></i>
+            </button>
+          </div>
+          <p class="text-xs text-slate-400 italic mb-1">"${escapeHtml(data.original)}"</p>
+          <div class="text-xs text-amber-400 font-bold uppercase tracking-wider">Artinya buat Pak Driver:</div>
+          <p class="text-lg sm:text-xl font-black text-white mt-0.5 leading-snug">${escapeHtml(data.translation)}</p>
+        `;
+      } else {
+        // Pak Driver bicara -> Ditampilkan besar dalam Bahasa Inggris buat Tamu Bule
+        card.className = "p-4 rounded-2xl bg-slate-900 border-2 border-emerald-500/40 shadow-lg";
+        card.innerHTML = `
+          <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
+            <span class="text-xs font-black px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-300 flex items-center gap-1.5">
+              🚖 KATA PAK DRIVER:
+            </span>
+            <button class="speak-again-btn p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300" title="Putar suara lagi">
+              <i data-lucide="volume-2" class="w-4 h-4 text-emerald-400"></i>
+            </button>
+          </div>
+          <p class="text-xs text-slate-400 italic mb-1">"${escapeHtml(data.original)}"</p>
+          <div class="text-xs text-emerald-400 font-bold uppercase tracking-wider">Diterjemahkan ke Tamu (English):</div>
+          <p class="text-lg sm:text-xl font-black text-white mt-0.5 leading-snug">"${escapeHtml(data.translation)}"</p>
+        `;
+      }
+
+      conversationFeed.appendChild(card);
+      lucide.createIcons();
+
+      // Tombol putar ulang suara jika bule atau driver kurang jelas mendengar
+      const btn = card.querySelector('.speak-again-btn');
+      btn.addEventListener('click', () => {
+        speakOutput(data.translation, isTourist ? 'id' : 'en');
+      });
+
+      // Gulir otomatis ke kartu terbaru
+      conversationFeed.scrollTo({ top: conversationFeed.scrollHeight, behavior: 'smooth' });
+    }
+
+    function escapeHtml(text) {
+      const d = document.createElement('div');
+      d.textContent = text;
+      return d.innerHTML;
+    }
+
+    mainToggleBtn.addEventListener('click', () => {
+      if (!isRunning) {
+        // Nyalakan Hands-Free
+        if (!recognition) {
+          const ok = initSpeechEngine();
+          if (!ok) return;
+        }
+
+        try {
+          recognition.start();
+          isRunning = true;
+          setSystemStatus('LISTENING');
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        // Matikan Hands-Free
+        isRunning = false;
+        if (silenceTimer) clearTimeout(silenceTimer);
+        if (recognition) {
+          try { recognition.stop(); } catch (e) {}
+        }
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+        }
+        liveListeningBox.classList.add('hidden');
+        setSystemStatus('OFF');
+      }
+    });
+
+    // Tombol Bersihkan Layar
+    clearChatBtn.addEventListener('click', () => {
+      conversationFeed.innerHTML = `
+        <div id="emptyFeedState" class="h-48 flex flex-col items-center justify-center text-center p-4">
+          <div class="text-4xl mb-2">🌴</div>
+          <h2 class="text-base font-bold text-slate-300">Layar Sudah Bersih</h2>
+          <p class="text-xs text-slate-400 mt-1">Silakan langsung bicara kembali bersama tamu.</p>
+        </div>
+      `;
+      lucide.createIcons();
+    });
+
+    // Inisialisasi awal saat halaman dibuka
+    window.addEventListener('DOMContentLoaded', () => {
+      setSystemStatus('OFF');
+    });
+  </script>
+</body>
+</html>
+```
